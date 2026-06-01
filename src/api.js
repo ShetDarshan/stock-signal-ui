@@ -1,5 +1,4 @@
-const BASE_URL = process.env.REACT_APP_API_BASE_URL ||
-  'http://stock-signal-api-alb-1101643266.ap-south-1.elb.amazonaws.com/api/v1';
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export const fetchSignal = async (symbol) => {
   const res = await fetch(`${BASE_URL}/signal/${symbol}`);

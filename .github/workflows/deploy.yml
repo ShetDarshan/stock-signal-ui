@@ -25,6 +25,8 @@ jobs:
         run: npm run build
         env:
           REACT_APP_API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          REACT_APP_USERNAME: ${{ secrets.REACT_APP_USERNAME }}
+          REACT_APP_PASSWORD: ${{ secrets.REACT_APP_PASSWORD }}
 
       - name: Deploy to S3
         uses: aws-actions/configure-aws-credentials@v4

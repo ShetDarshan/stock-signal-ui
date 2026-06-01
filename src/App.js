@@ -5,8 +5,8 @@ import ScreenerGrid from './components/ScreenerGrid';
 import { INDICES } from './indices';
 
 const CREDS = {
-  username: process.env.REACT_APP_USERNAME || 'darshan',
-  password: process.env.REACT_APP_PASSWORD || 'signal123',
+  username: process.env.REACT_APP_USERNAME,
+  password: process.env.REACT_APP_PASSWORD,
 };
 
 const inputStyle = {

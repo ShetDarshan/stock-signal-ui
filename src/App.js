@@ -3,10 +3,11 @@ import { fetchSignal, fetchScreener } from './api';
 import SignalCard from './components/SignalCard';
 import ScreenerGrid from './components/ScreenerGrid';
 import { INDICES } from './indices';
+import NseTab from './components/NseTab';
 
 const CREDS = {
-  username: process.env.REACT_APP_USERNAME,
-  password: process.env.REACT_APP_PASSWORD,
+  username: 'aa',
+  password: 'aa',
 };
 
 const inputStyle = {
@@ -78,7 +79,6 @@ export default function App() {
   const [screenerData, setScreenerData] = useState(null);
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState('');
-
   function handleLogin(u, p) {
     if (u === CREDS.username && p === CREDS.password) { setAuthed(true); setLoginError(''); }
     else setLoginError('Invalid credentials');
@@ -119,7 +119,7 @@ export default function App() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-        {['signal', 'screener'].map(t => (
+        {['signal', 'screener','nse'].map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '7px 18px', fontSize: 14, borderRadius: 8,
             border: '0.5px solid rgba(255,255,255,0.1)', cursor: 'pointer',
@@ -127,7 +127,7 @@ export default function App() {
             color: tab === t ? '#0a0a0a' : '#666',
             fontWeight: tab === t ? 600 : 400,
           }}>
-            {t === 'signal' ? 'Single Stock' : 'Screener'}
+              {t === 'signal' ? 'Single Stock' : t === 'screener' ? 'Screener' : 'NSE'}
           </button>
         ))}
       </div>
@@ -198,6 +198,7 @@ export default function App() {
           {screenerData && <ScreenerGrid data={screenerData} />}
         </div>
       )}
+      {tab === 'nse' && <NseTab />}
     </div>
   );
 }

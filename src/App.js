@@ -6,8 +6,8 @@ import { INDICES } from './indices';
 import NseTab from './components/NseTab';
 
 const CREDS = {
-  username: 'aa',
-  password: 'aa',
+  username: process.env.REACT_APP_USERNAME,
+  password: process.env.REACT_APP_PASSWORD,
 };
 
 const inputStyle = {

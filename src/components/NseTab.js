@@ -153,8 +153,8 @@ const SummaryCard = ({ s }) => (
 const DealsTable = ({ deals }) => {
   const [filter, setFilter] = useState('ALL');
   const cats = ['ALL', 'MUTUAL_FUND', 'FII', 'INSURANCE', 'PROMOTER', 'HNI'];
-  const filtered = (filter === 'ALL' ? deals : deals.filter(d => d.clientCategory === filter))
-  .sort((a, b) => b.price - a.price);
+const filtered = (filter === 'ALL' ? deals : deals.filter(d => d.clientCategory === filter))
+  .sort((a, b) => Number(b.dealValueCr) - Number(a.dealValueCr));
 
   return (
     <div>

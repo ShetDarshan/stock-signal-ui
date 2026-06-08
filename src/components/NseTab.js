@@ -404,7 +404,7 @@ export default function NseTab() {
       {loading && <PipelineLoader />}
 
       {/* Results — shows only when not loading */}
-      {!loading && data && (
+      {!loading && data && data.buySignals && (
         <>
           <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase',
             letterSpacing: '0.05em', marginBottom: 8 }}>File Status</div>

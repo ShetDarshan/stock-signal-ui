@@ -129,25 +129,25 @@ const PipelineLoader = () => {
 // ── Sub components ────────────────────────────────────────────────────────────
 
 const DownloadStatus = ({ status }) => {
-  if (!status || Object.keys(status).length === 0) return null;
+  if (!status) return null;
   return (
-    <div style={{ ...card, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-      {Object.entries(status).map(([file, msg]) => {
-        const ok = msg.startsWith('OK');
-        return (
-          <div key={file} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-              background: ok ? '#22c55e' : '#ef4444' }} />
-            <div>
-              <div style={{ fontSize: 12, color: '#ccc', fontWeight: 500 }}>{file}</div>
-              <div style={{ fontSize: 11, color: ok ? '#555' : '#7f1d1d' }}>
-                {ok ? msg.replace('OK ', '') : msg.replace('FAILED: ', '')}
-              </div>
+  <div style={{ ...card, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+    {Object.entries(status).map(([file, msg]) => {
+      const ok = msg.startsWith('OK');
+      return (
+        <div key={file} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            background: ok ? '#22c55e' : '#ef4444' }} />
+          <div>
+            <div style={{ fontSize: 12, color: '#ccc', fontWeight: 500 }}>{file}</div>
+            <div style={{ fontSize: 11, color: ok ? '#555' : '#7f1d1d' }}>
+              {ok ? msg.replace('OK ', '') : msg.replace('FAILED: ', '')}
             </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
+      );
+    })}
+  </div>
   );
 };
 

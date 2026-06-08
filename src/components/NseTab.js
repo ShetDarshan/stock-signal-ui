@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchNseSignals } from '../api';
+
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const card = {
   background: '#111',
@@ -8,7 +9,7 @@ const card = {
   padding: '1rem 1.25rem',
   marginBottom: '1rem',
 };
-f
+
 const badge = (type) => {
   const map = {
     BUY:     { bg: 'rgba(34,197,94,0.12)',  color: '#22c55e' },
@@ -40,13 +41,13 @@ const crore = (n) => n == null ? '—' : `₹${fmt(n)} Cr`;
 
 // ── Pipeline Loading Screen ───────────────────────────────────────────────────
 const PIPELINE_STEPS = [
-  { key: 'bulk',    label: 'Downloading Bulk Deals',         sub: 'archives.nseindia.com/content/equities/bulk.csv',        duration: 8000  },
-  { key: 'block',   label: 'Downloading Block Deals',        sub: 'archives.nseindia.com/content/equities/block.csv',       duration: 6000  },
-  { key: 'bhav',    label: 'Downloading Bhavcopy',           sub: 'sec_bhavdata_full — ~2000 equity records',               duration: 10000 },
-  { key: 'fii',     label: 'Downloading FII / DII Flow',     sub: 'fii_stats — market-wide institutional flow',             duration: 6000  },
-  { key: 'index',   label: 'Downloading Index Data',         sub: 'ind_close_all — all NSE sector indices',                 duration: 6000  },
-  { key: 'parse',   label: 'Parsing & Scoring Signals',      sub: 'Classifying clients, computing delivery %, scoring',     duration: 8000  },
-  { key: 'save',    label: 'Saving to Database',             sub: 'Persisting ~2500 rows to Neon PostgreSQL',               duration: 40000 },
+  { key: 'bulk',  label: 'Downloading Bulk Deals',      sub: 'archives.nseindia.com/content/equities/bulk.csv',      duration: 8000  },
+  { key: 'block', label: 'Downloading Block Deals',     sub: 'archives.nseindia.com/content/equities/block.csv',     duration: 6000  },
+  { key: 'bhav',  label: 'Downloading Bhavcopy',        sub: 'sec_bhavdata_full — ~2000 equity records',             duration: 10000 },
+  { key: 'fii',   label: 'Downloading FII / DII Flow',  sub: 'fii_stats — market-wide institutional flow',           duration: 6000  },
+  { key: 'index', label: 'Downloading Index Data',      sub: 'ind_close_all — all NSE sector indices',               duration: 6000  },
+  { key: 'parse', label: 'Parsing & Scoring Signals',   sub: 'Classifying clients, computing delivery %, scoring',   duration: 8000  },
+  { key: 'save',  label: 'Saving to Database',          sub: 'Persisting ~2500 rows to Neon PostgreSQL',             duration: 40000 },
 ];
 
 const PipelineLoader = () => {
@@ -55,7 +56,6 @@ const PipelineLoader = () => {
   const [dots, setDots] = useState('');
 
   useEffect(() => {
-    // Animate dots
     const dotsInterval = setInterval(() => {
       setDots(d => d.length >= 3 ? '' : d + '.');
     }, 400);
@@ -63,55 +63,39 @@ const PipelineLoader = () => {
   }, []);
 
   useEffect(() => {
-    // Progress through steps based on estimated durations
     let elapsed = 0;
     const timers = PIPELINE_STEPS.map((step, i) => {
       const timer = setTimeout(() => {
         setCurrentStep(i);
-        if (i > 0) {
-          setCompletedSteps(prev => [...prev, i - 1]);
-        }
+        if (i > 0) setCompletedSteps(prev => [...prev, i - 1]);
       }, elapsed);
       elapsed += step.duration;
       return timer;
     });
-
     return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', padding: '3rem 1rem', gap: '2rem',
-    }}>
-      {/* Spinner */}
-      <div style={{ position: 'relative', width: 56, height: 56 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: '50%',
-          border: '2px solid rgba(255,255,255,0.05)',
-          borderTop: '2px solid #f0f0f0',
-          animation: 'spin 1s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 1rem', gap: '2rem' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%',
+        border: '2px solid rgba(255,255,255,0.05)', borderTop: '2px solid #f0f0f0',
+        animation: 'spin 1s linear infinite' }} />
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+      `}</style>
 
-      {/* Steps */}
       <div style={{ width: '100%', maxWidth: 480 }}>
         {PIPELINE_STEPS.map((step, i) => {
           const isDone    = completedSteps.includes(i);
           const isActive  = currentStep === i;
           const isPending = !isDone && !isActive;
-
           return (
             <div key={step.key} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12,
-              padding: '10px 0',
-              borderBottom: i < PIPELINE_STEPS.length - 1
-                ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
-              opacity: isPending ? 0.25 : 1,
-              transition: 'opacity 0.4s ease',
+              display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0',
+              borderBottom: i < PIPELINE_STEPS.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
+              opacity: isPending ? 0.25 : 1, transition: 'opacity 0.4s ease',
             }}>
-              {/* Icon */}
               <div style={{ width: 20, height: 20, flexShrink: 0, marginTop: 2 }}>
                 {isDone && (
                   <svg viewBox="0 0 20 20" fill="none" style={{ width: 20, height: 20 }}>
@@ -119,54 +103,30 @@ const PipelineLoader = () => {
                     <path d="M6 10l3 3 5-5" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 )}
-                {isActive && (
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: '#f0f0f0', margin: '6px',
-                    boxShadow: '0 0 8px rgba(240,240,240,0.6)',
-                    animation: 'pulse 1s ease-in-out infinite',
-                  }} />
-                )}
-                {isPending && (
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)', margin: '6px',
-                  }} />
-                )}
+                {isActive && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f0f0f0',
+                  margin: '6px', boxShadow: '0 0 8px rgba(240,240,240,0.6)', animation: 'pulse 1s ease-in-out infinite' }} />}
+                {isPending && <div style={{ width: 8, height: 8, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)', margin: '6px' }} />}
               </div>
-
-              {/* Text */}
               <div style={{ flex: 1 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: isActive ? 600 : 400,
-                  color: isDone ? '#22c55e' : isActive ? '#f0f0f0' : '#555',
-                }}>
+                <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 400,
+                  color: isDone ? '#22c55e' : isActive ? '#f0f0f0' : '#555' }}>
                   {step.label}{isActive ? dots : ''}
                 </div>
-                <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>
-                  {step.sub}
-                </div>
+                <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>{step.sub}</div>
               </div>
             </div>
           );
         })}
       </div>
-
       <div style={{ fontSize: 12, color: '#333', textAlign: 'center' }}>
         First run downloads & saves all data — subsequent runs load instantly from DB
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.8); }
-        }
-      `}</style>
     </div>
   );
 };
 
-// ── Rest of components unchanged ──────────────────────────────────────────────
+// ── Sub components ────────────────────────────────────────────────────────────
 
 const DownloadStatus = ({ status }) => (
   <div style={{ ...card, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
@@ -190,13 +150,13 @@ const DownloadStatus = ({ status }) => (
 
 const StatsRow = ({ data }) => {
   const stats = [
-    { label: 'Bulk Deals', val: data.bulkDealsProcessed },
-    { label: 'Block Deals', val: data.blockDealsProcessed },
-    { label: 'Bhavcopy', val: `${data.bhavRecordsProcessed} stocks` },
+    { label: 'Bulk Deals',       val: data.bulkDealsProcessed },
+    { label: 'Block Deals',      val: data.blockDealsProcessed },
+    { label: 'Bhavcopy',         val: `${data.bhavRecordsProcessed} stocks` },
     { label: 'Symbols Analysed', val: data.symbolSummariesBuilt },
-    { label: 'BUY Signals', val: data.buySignals?.length, color: '#22c55e' },
-    { label: 'WATCH', val: data.watchSignals?.length, color: '#eab308' },
-    { label: 'SELL', val: data.sellSignals?.length, color: '#ef4444' },
+    { label: 'BUY Signals',      val: data.buySignals?.length,   color: '#22c55e' },
+    { label: 'WATCH',            val: data.watchSignals?.length,  color: '#eab308' },
+    { label: 'SELL',             val: data.sellSignals?.length,   color: '#ef4444' },
   ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: '1rem' }}>
@@ -216,10 +176,8 @@ const SignalRow = ({ sig }) => (
       <span style={{ fontSize: 15, fontWeight: 700, color: '#f0f0f0', minWidth: 100 }}>{sig.symbol}</span>
       {badge(sig.signalType)}
       <span style={{ fontSize: 18, fontWeight: 700, color:
-        sig.signalType === 'BUY' ? '#22c55e' :
-        sig.signalType === 'SELL' ? '#ef4444' :
-        sig.signalType === 'WATCH' ? '#eab308' : '#444'
-      }}>{sig.score}/100</span>
+        sig.signalType === 'BUY' ? '#22c55e' : sig.signalType === 'SELL' ? '#ef4444' :
+        sig.signalType === 'WATCH' ? '#eab308' : '#444' }}>{sig.score}/100</span>
     </div>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
       {sig.scoringReasons?.map((r, i) => (
@@ -246,12 +204,12 @@ const SummaryCard = ({ s }) => (
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginBottom: 8 }}>
       {[
-        ['Inst. Buy', crore(s.instBuyCr)],
-        ['Inst. Sell', crore(s.instSellCr)],
-        ['Avg Price', `₹${fmt(s.avgDealPrice)}`],
-        ['Close', s.closePrice ? `₹${fmt(s.closePrice)}` : '—'],
-        ['Delivery %', s.deliveryPct ? `${fmt(s.deliveryPct)}%` : '—'],
-        ['Buyers', s.numInstBuyers],
+        ['Inst. Buy',   crore(s.instBuyCr)],
+        ['Inst. Sell',  crore(s.instSellCr)],
+        ['Avg Price',   `₹${fmt(s.avgDealPrice)}`],
+        ['Close',       s.closePrice ? `₹${fmt(s.closePrice)}` : '—'],
+        ['Delivery %',  s.deliveryPct ? `${fmt(s.deliveryPct)}%` : '—'],
+        ['Buyers',      s.numInstBuyers],
       ].map(([l, v]) => (
         <div key={l}>
           <div style={{ fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
@@ -312,9 +270,7 @@ const DealsTable = ({ deals }) => {
                   textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.clientName}>{d.clientName}</td>
                 <td style={{ padding: '7px 10px' }}>{badge(d.clientCategory)}</td>
                 <td style={{ padding: '7px 10px' }}>
-                  <span style={{ color: d.buySell === 'BUY' ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
-                    {d.buySell}
-                  </span>
+                  <span style={{ color: d.buySell === 'BUY' ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{d.buySell}</span>
                 </td>
                 <td style={{ padding: '7px 10px', color: '#888', fontFamily: 'monospace' }}>{fmt(d.quantity)}</td>
                 <td style={{ padding: '7px 10px', color: '#888', fontFamily: 'monospace' }}>₹{fmt(d.price)}</td>
@@ -332,69 +288,72 @@ const DealsTable = ({ deals }) => {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function NseTab() {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate]       = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [view, setView] = useState('signals');
+  const [error, setError]     = useState(null);
+  const [data, setData]       = useState(null);
+  const [view, setView]       = useState('signals');
 
-const run = async () => {
-    setLoading(true); setError(null);
-    
+  const run = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
-        const params = date ? `?date=${date}` : '';
-        
-        // Step 1 — start job, returns instantly
-        const startRes = await fetch(`${BASE_URL}/nse/signals/run${params}`);
-        const startData = await startRes.json();
-        
-        if (!startRes.ok) throw new Error(startData.message || 'Failed to start pipeline');
-        
-        // Cache hit — already complete
-        if (startData.status === 'COMPLETED') {
-            setData(startData.result);
+      const params = date ? `?date=${date}` : '';
+
+      // Step 1 — start job, returns instantly (202 Accepted)
+      const startRes  = await fetch(`${BASE_URL}/nse/signals/run${params}`);
+      const startData = await startRes.json();
+
+      if (!startRes.ok) throw new Error(startData.message || 'Failed to start pipeline');
+
+      // Cache hit — backend already completed synchronously
+      if (startData.status === 'COMPLETED') {
+        setData(startData.result);
+        setLoading(false);
+        return;
+      }
+
+      if (startData.status === 'FAILED') {
+        throw new Error(startData.message || 'Pipeline failed');
+      }
+
+      // Step 2 — poll every 10s until done
+      const jobId = startData.jobId;
+
+      const poll = async () => {
+        try {
+          const res  = await fetch(`${BASE_URL}/nse/signals/status/${jobId}`);
+          const json = await res.json();
+
+          if (json.status === 'COMPLETED') {
+            setData(json.result);
             setLoading(false);
-            return;
+          } else if (json.status === 'FAILED') {
+            setError(json.message || 'Pipeline failed');
+            setLoading(false);
+          } else {
+            setTimeout(poll, 10000); // still RUNNING
+          }
+        } catch (e) {
+          setError(e.message);
+          setLoading(false);
         }
+      };
 
-        if (startData.status === 'FAILED') {
-            throw new Error(startData.message);
-        }
-
-        // Step 2 — poll in background
-        const jobId = startData.jobId;
-        const poll = async () => {
-            try {
-                const res = await fetch(`${BASE_URL}/nse/signals/status/${jobId}`);
-                const data = await res.json();
-
-                if (data.status === 'COMPLETED') {
-                    setData(data.result);
-                    setLoading(false);
-                } else if (data.status === 'FAILED') {
-                    setError(data.message || 'Pipeline failed');
-                    setLoading(false);
-                } else {
-                    setTimeout(poll, 10000); // still RUNNING, poll again
-                }
-            } catch (e) {
-                setError(e.message);
-                setLoading(false);
-            }
-        };
-
-        setTimeout(poll, 10000); // first poll after 10s
+      setTimeout(poll, 10000); // first poll after 10s
 
     } catch (e) {
-        setError(e.message);
-        setLoading(false);
+      setError(e.message);
+      setLoading(false);
     }
+    // NOTE: no finally block — setLoading(false) is handled per-path above
   };
 
   const allSignals = data ? [
-    ...(data.buySignals || []),
+    ...(data.buySignals  || []),
     ...(data.watchSignals || []),
-    ...(data.sellSignals || []),
+    ...(data.sellSignals  || []),
     ...(data.noiseSignals || []),
   ] : [];
 
@@ -427,9 +386,7 @@ const run = async () => {
           {loading ? 'Running…' : 'Run Pipeline'}
         </button>
         {data && !loading && (
-          <span style={{ fontSize: 12, color: '#444', marginLeft: 4 }}>
-            Last run: {data.date}
-          </span>
+          <span style={{ fontSize: 12, color: '#444', marginLeft: 4 }}>Last run: {data.date}</span>
         )}
       </div>
 
@@ -440,10 +397,10 @@ const run = async () => {
         </div>
       )}
 
-      {/* ── Loading screen ── */}
+      {/* Loading screen — shows while polling */}
       {loading && <PipelineLoader />}
 
-      {/* ── Results ── */}
+      {/* Results — shows only when not loading */}
       {!loading && data && (
         <>
           <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase',
@@ -452,15 +409,9 @@ const run = async () => {
           <StatsRow data={data} />
 
           <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
-            <button style={subTab('signals')} onClick={() => setView('signals')}>
-              Signals ({allSignals.length})
-            </button>
-            <button style={subTab('summaries')} onClick={() => setView('summaries')}>
-              Summaries ({data.allSummaries?.length})
-            </button>
-            <button style={subTab('deals')} onClick={() => setView('deals')}>
-              All Deals ({data.allDeals?.length})
-            </button>
+            <button style={subTab('signals')}   onClick={() => setView('signals')}>Signals ({allSignals.length})</button>
+            <button style={subTab('summaries')} onClick={() => setView('summaries')}>Summaries ({data.allSummaries?.length})</button>
+            <button style={subTab('deals')}     onClick={() => setView('deals')}>All Deals ({data.allDeals?.length})</button>
           </div>
 
           {view === 'signals' && (
@@ -475,9 +426,7 @@ const run = async () => {
           )}
 
           {view === 'summaries' && (
-            <div>
-              {(data.allSummaries || []).map((s, i) => <SummaryCard key={i} s={s} />)}
-            </div>
+            <div>{(data.allSummaries || []).map((s, i) => <SummaryCard key={i} s={s} />)}</div>
           )}
 
           {view === 'deals' && (

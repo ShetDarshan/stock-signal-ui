@@ -8,7 +8,7 @@ const card = {
   padding: '1rem 1.25rem',
   marginBottom: '1rem',
 };
-
+f
 const badge = (type) => {
   const map = {
     BUY:     { bg: 'rgba(34,197,94,0.12)',  color: '#22c55e' },
@@ -338,15 +338,56 @@ export default function NseTab() {
   const [data, setData] = useState(null);
   const [view, setView] = useState('signals');
 
-  const run = async () => {
+const run = async () => {
     setLoading(true); setError(null);
+    
     try {
-      const result = await fetchNseSignals(date);
-      setData(result);
+        const params = date ? `?date=${date}` : '';
+        
+        // Step 1 — start job, returns instantly
+        const startRes = await fetch(`${BASE_URL}/nse/signals/run${params}`);
+        const startData = await startRes.json();
+        
+        if (!startRes.ok) throw new Error(startData.message || 'Failed to start pipeline');
+        
+        // Cache hit — already complete
+        if (startData.status === 'COMPLETED') {
+            setData(startData.result);
+            setLoading(false);
+            return;
+        }
+
+        if (startData.status === 'FAILED') {
+            throw new Error(startData.message);
+        }
+
+        // Step 2 — poll in background
+        const jobId = startData.jobId;
+        const poll = async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/nse/signals/status/${jobId}`);
+                const data = await res.json();
+
+                if (data.status === 'COMPLETED') {
+                    setData(data.result);
+                    setLoading(false);
+                } else if (data.status === 'FAILED') {
+                    setError(data.message || 'Pipeline failed');
+                    setLoading(false);
+                } else {
+                    setTimeout(poll, 10000); // still RUNNING, poll again
+                }
+            } catch (e) {
+                setError(e.message);
+                setLoading(false);
+            }
+        };
+
+        setTimeout(poll, 10000); // first poll after 10s
+
     } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+        setError(e.message);
+        setLoading(false);
     }
   };
 

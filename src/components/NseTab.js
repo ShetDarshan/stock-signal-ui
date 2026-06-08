@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchNseSignals } from '../api';
 
 const card = {
@@ -38,7 +38,136 @@ const badge = (type) => {
 const fmt = (n) => n == null ? '—' : Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
 const crore = (n) => n == null ? '—' : `₹${fmt(n)} Cr`;
 
-// Download status panel
+// ── Pipeline Loading Screen ───────────────────────────────────────────────────
+const PIPELINE_STEPS = [
+  { key: 'bulk',    label: 'Downloading Bulk Deals',         sub: 'archives.nseindia.com/content/equities/bulk.csv',        duration: 8000  },
+  { key: 'block',   label: 'Downloading Block Deals',        sub: 'archives.nseindia.com/content/equities/block.csv',       duration: 6000  },
+  { key: 'bhav',    label: 'Downloading Bhavcopy',           sub: 'sec_bhavdata_full — ~2000 equity records',               duration: 10000 },
+  { key: 'fii',     label: 'Downloading FII / DII Flow',     sub: 'fii_stats — market-wide institutional flow',             duration: 6000  },
+  { key: 'index',   label: 'Downloading Index Data',         sub: 'ind_close_all — all NSE sector indices',                 duration: 6000  },
+  { key: 'parse',   label: 'Parsing & Scoring Signals',      sub: 'Classifying clients, computing delivery %, scoring',     duration: 8000  },
+  { key: 'save',    label: 'Saving to Database',             sub: 'Persisting ~2500 rows to Neon PostgreSQL',               duration: 40000 },
+];
+
+const PipelineLoader = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState([]);
+  const [dots, setDots] = useState('');
+
+  useEffect(() => {
+    // Animate dots
+    const dotsInterval = setInterval(() => {
+      setDots(d => d.length >= 3 ? '' : d + '.');
+    }, 400);
+    return () => clearInterval(dotsInterval);
+  }, []);
+
+  useEffect(() => {
+    // Progress through steps based on estimated durations
+    let elapsed = 0;
+    const timers = PIPELINE_STEPS.map((step, i) => {
+      const timer = setTimeout(() => {
+        setCurrentStep(i);
+        if (i > 0) {
+          setCompletedSteps(prev => [...prev, i - 1]);
+        }
+      }, elapsed);
+      elapsed += step.duration;
+      return timer;
+    });
+
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: '3rem 1rem', gap: '2rem',
+    }}>
+      {/* Spinner */}
+      <div style={{ position: 'relative', width: 56, height: 56 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%',
+          border: '2px solid rgba(255,255,255,0.05)',
+          borderTop: '2px solid #f0f0f0',
+          animation: 'spin 1s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+
+      {/* Steps */}
+      <div style={{ width: '100%', maxWidth: 480 }}>
+        {PIPELINE_STEPS.map((step, i) => {
+          const isDone    = completedSteps.includes(i);
+          const isActive  = currentStep === i;
+          const isPending = !isDone && !isActive;
+
+          return (
+            <div key={step.key} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 12,
+              padding: '10px 0',
+              borderBottom: i < PIPELINE_STEPS.length - 1
+                ? '0.5px solid rgba(255,255,255,0.04)' : 'none',
+              opacity: isPending ? 0.25 : 1,
+              transition: 'opacity 0.4s ease',
+            }}>
+              {/* Icon */}
+              <div style={{ width: 20, height: 20, flexShrink: 0, marginTop: 2 }}>
+                {isDone && (
+                  <svg viewBox="0 0 20 20" fill="none" style={{ width: 20, height: 20 }}>
+                    <circle cx="10" cy="10" r="9" fill="rgba(34,197,94,0.15)" stroke="#22c55e" strokeWidth="1" />
+                    <path d="M6 10l3 3 5-5" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {isActive && (
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#f0f0f0', margin: '6px',
+                    boxShadow: '0 0 8px rgba(240,240,240,0.6)',
+                    animation: 'pulse 1s ease-in-out infinite',
+                  }} />
+                )}
+                {isPending && (
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.15)', margin: '6px',
+                  }} />
+                )}
+              </div>
+
+              {/* Text */}
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: 13, fontWeight: isActive ? 600 : 400,
+                  color: isDone ? '#22c55e' : isActive ? '#f0f0f0' : '#555',
+                }}>
+                  {step.label}{isActive ? dots : ''}
+                </div>
+                <div style={{ fontSize: 11, color: '#333', marginTop: 2 }}>
+                  {step.sub}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: 12, color: '#333', textAlign: 'center' }}>
+        First run downloads & saves all data — subsequent runs load instantly from DB
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.8); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ── Rest of components unchanged ──────────────────────────────────────────────
+
 const DownloadStatus = ({ status }) => (
   <div style={{ ...card, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
     {Object.entries(status).map(([file, msg]) => {
@@ -59,7 +188,6 @@ const DownloadStatus = ({ status }) => (
   </div>
 );
 
-// Summary stats row
 const StatsRow = ({ data }) => {
   const stats = [
     { label: 'Bulk Deals', val: data.bulkDealsProcessed },
@@ -82,7 +210,6 @@ const StatsRow = ({ data }) => {
   );
 };
 
-// Signal card for BUY/WATCH/SELL/NOISE
 const SignalRow = ({ sig }) => (
   <div style={{ ...card, marginBottom: '0.5rem', padding: '0.875rem 1.25rem' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -107,7 +234,6 @@ const SignalRow = ({ sig }) => (
   </div>
 );
 
-// Symbol summary card
 const SummaryCard = ({ s }) => (
   <div style={{ ...card, marginBottom: '0.5rem' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -149,12 +275,11 @@ const SummaryCard = ({ s }) => (
   </div>
 );
 
-// Deals table — grouped by symbol
 const DealsTable = ({ deals }) => {
   const [filter, setFilter] = useState('ALL');
   const cats = ['ALL', 'MUTUAL_FUND', 'FII', 'INSURANCE', 'PROMOTER', 'HNI'];
-const filtered = (filter === 'ALL' ? deals : deals.filter(d => d.clientCategory === filter))
-  .sort((a, b) => Number(b.dealValueCr) - Number(a.dealValueCr));
+  const filtered = (filter === 'ALL' ? deals : deals.filter(d => d.clientCategory === filter))
+    .sort((a, b) => Number(b.dealValueCr) - Number(a.dealValueCr));
 
   return (
     <div>
@@ -204,12 +329,14 @@ const filtered = (filter === 'ALL' ? deals : deals.filter(d => d.clientCategory 
   );
 };
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function NseTab() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [view, setView] = useState('signals'); // signals | summaries | deals
+  const [view, setView] = useState('signals');
 
   const run = async () => {
     setLoading(true); setError(null);
@@ -242,7 +369,7 @@ export default function NseTab() {
     fontSize: 14, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
   });
 
-  const subTab = (t, label) => ({
+  const subTab = (t) => ({
     padding: '6px 14px', fontSize: 13, borderRadius: 6, cursor: 'pointer',
     border: '0.5px solid rgba(255,255,255,0.1)',
     background: view === t ? 'rgba(255,255,255,0.1)' : 'transparent',
@@ -258,7 +385,7 @@ export default function NseTab() {
         <button onClick={run} disabled={loading} style={btnStyle(loading)}>
           {loading ? 'Running…' : 'Run Pipeline'}
         </button>
-        {data && (
+        {data && !loading && (
           <span style={{ fontSize: 12, color: '#444', marginLeft: 4 }}>
             Last run: {data.date}
           </span>
@@ -272,25 +399,25 @@ export default function NseTab() {
         </div>
       )}
 
-      {data && (
+      {/* ── Loading screen ── */}
+      {loading && <PipelineLoader />}
+
+      {/* ── Results ── */}
+      {!loading && data && (
         <>
-          {/* Download status */}
           <div style={{ fontSize: 11, color: '#444', textTransform: 'uppercase',
             letterSpacing: '0.05em', marginBottom: 8 }}>File Status</div>
           <DownloadStatus status={data.downloadStatus} />
-
-          {/* Stats */}
           <StatsRow data={data} />
 
-          {/* Sub-tabs */}
           <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
-            <button style={subTab('signals', 'Signals')} onClick={() => setView('signals')}>
+            <button style={subTab('signals')} onClick={() => setView('signals')}>
               Signals ({allSignals.length})
             </button>
-            <button style={subTab('summaries', 'Summaries')} onClick={() => setView('summaries')}>
+            <button style={subTab('summaries')} onClick={() => setView('summaries')}>
               Summaries ({data.allSummaries?.length})
             </button>
-            <button style={subTab('deals', 'All Deals')} onClick={() => setView('deals')}>
+            <button style={subTab('deals')} onClick={() => setView('deals')}>
               All Deals ({data.allDeals?.length})
             </button>
           </div>

@@ -4,6 +4,7 @@ import SignalCard from './components/SignalCard';
 import ScreenerGrid from './components/ScreenerGrid';
 import { INDICES } from './indices';
 import NseTab from './components/NseTab';
+import ScreenerTab from './components/ScreenerTab';
 
 const CREDS = {
   username: process.env.REACT_APP_USERNAME,
@@ -79,6 +80,7 @@ export default function App() {
   const [screenerData, setScreenerData] = useState(null);
   const [screenerLoading, setScreenerLoading] = useState(false);
   const [screenerError, setScreenerError] = useState('');
+
   function handleLogin(u, p) {
     if (u === CREDS.username && p === CREDS.password) { setAuthed(true); setLoginError(''); }
     else setLoginError('Invalid credentials');
@@ -108,6 +110,13 @@ export default function App() {
 
   if (!authed) return <LoginPage onLogin={handleLogin} error={loginError} />;
 
+  const TABS = [
+    { key: 'signal',   label: 'Single Stock' },
+    { key: 'screener', label: 'Screener'      },
+    { key: 'nse',      label: 'NSE Pipeline'  },
+    { key: 'picks',    label: 'Daily Picks'   },  // ← new
+  ];
+
   return (
     <div style={{ minHeight: '100vh', padding: '1.5rem', maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
@@ -118,20 +127,20 @@ export default function App() {
         </div>
       </div>
 
+      {/* Tab bar */}
       <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-        {['signal', 'screener','nse'].map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '7px 18px', fontSize: 14, borderRadius: 8,
             border: '0.5px solid rgba(255,255,255,0.1)', cursor: 'pointer',
-            background: tab === t ? '#f0f0f0' : 'transparent',
-            color: tab === t ? '#0a0a0a' : '#666',
-            fontWeight: tab === t ? 600 : 400,
-          }}>
-              {t === 'signal' ? 'Single Stock' : t === 'screener' ? 'Screener' : 'NSE'}
-          </button>
+            background: tab === t.key ? '#f0f0f0' : 'transparent',
+            color: tab === t.key ? '#0a0a0a' : '#666',
+            fontWeight: tab === t.key ? 600 : 400,
+          }}>{t.label}</button>
         ))}
       </div>
 
+      {/* Single Stock */}
       {tab === 'signal' && (
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
@@ -147,6 +156,7 @@ export default function App() {
         </div>
       )}
 
+      {/* Screener */}
       {tab === 'screener' && (
         <div>
           <div style={{ background: '#111', border: '0.5px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
@@ -198,7 +208,12 @@ export default function App() {
           {screenerData && <ScreenerGrid data={screenerData} />}
         </div>
       )}
+
+      {/* NSE Pipeline */}
       {tab === 'nse' && <NseTab />}
+
+      {/* Daily Picks */}
+      {tab === 'picks' && <ScreenerTab />}
     </div>
   );
 }

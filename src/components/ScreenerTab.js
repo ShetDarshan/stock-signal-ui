@@ -130,7 +130,7 @@ export default function ScreenerTab() {
   const load = async () => {
     setLoading(true); setError(null);
     try {
-      const res  = await fetch(`${BASE_URL}/screener/daily/top?date=${date}`);
+      const res  = await fetch(`${BASE_URL}/screener/daily?date=${date}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to load screener');
       setStocks(data);
